@@ -169,7 +169,9 @@
 		var text_btn1 = document.getElementById("id_btn1");
         var text_btn2 = document.getElementById("id_btn2");
         var text_time = document.getElementById("id_time");
+        
         var bg_click = document.getElementById("bg_click"); 
+
         
         const textc = [ '快點吧，我等的花兒都謝了', 
                         '淡定，讓我想想', 
@@ -205,6 +207,13 @@
 			{
                 chessBox[i][j] = 0;
             }
+        }
+        
+        var cc = getQueryVariable('desk');
+        if(cc == 'error'){
+            //notice('error',9000);
+        }
+        else{ //notice('rrr',8000);
         }
 	
 		
@@ -368,7 +377,30 @@
 			g_btn_state = 1;
 			text_btn.innerHTML = "新遊戲";
             text_notice.innerHTML = "已登陸";
+            
+            let mm = {
+                "m_msgId": 33,
+                "m_deskId": 425997,
+            };
+            
+            send_msg(mm);
 		}
+        
+        function deal_msg_29(msg){
+            g_can_play = false;
+            document.head1.src = msg['m_url1']
+            document.head2.src = msg['m_url2'];
+        }
+        
+        function deal_msg_34(msg){
+            let error = msg['m_error'];
+            if(error == 1){
+                notice('房间已经解散');
+            }
+            else if(error == 2){
+                notice('房间观战已满');
+            }
+        }
 		
 		function deal_msg_45(msg)
 		{
@@ -548,6 +580,33 @@
 			oneStep(x,y,false);
 		}
 	}
+    
+    function deal_msg_210(msg){
+        g_zhuangpos = msg['m_zhuang'];
+        
+        for(i = 0,len = msg["m_black"].length; i < len; i++) 
+		{
+			var v = msg["m_black"][i];
+			var x = v%100;
+			var y = v/100;
+			oneStep(x,y,true);
+		}
+		for(i = 0,len = msg["m_white"].length; i < len; i++) 
+		{
+			var v = msg["m_white"][i];
+			var x = v%100;
+			var y = v/100;
+			oneStep(x,y,false);
+		}
+        
+        let cx = msg['m_cx'];
+        let cy = msg['m_cy'];
+        if(cx >= 0){
+            oneStep2(cx,cy);
+            g_upx = cx;
+            g_upy = cy;
+        }
+    }
 	
 	function deal_msg_203(msg)
 	{
@@ -600,7 +659,7 @@
 	
 	function deal_msg_205(msg)
 	{
-        console.log(msg);
+        //console.log(msg);
 		g_can_play = false;
         //
         let res = msg['m_result'];
@@ -685,11 +744,6 @@
         text_btn1.innerHTML = "";
         text_btn2.innerHTML = "";
 	}
-	
-	function deal_msg_210(msg)
-	{
-		g_zhuangpos = msg['m_zhuang'];
-	}
     
     function deal_msg_1006(msg){
         let type = msg['m_type'];
@@ -725,8 +779,10 @@
 		handle.set(12,deal_msg_12);
 		handle.set(1002,deal_msg_1002);
         handle.set(1006,deal_msg_1006);
+        handle.set(29,deal_msg_29);
 		handle.set(30,deal_msg_30);
         handle.set(31,deal_msg_31);
+        handle.set(34,deal_msg_34);
 		handle.set(37,deal_msg_37);
 		handle.set(38,deal_msg_38);
 		handle.set(45,deal_msg_45);
@@ -923,6 +979,17 @@
 				
 			}
 	}
+    
+    function getQueryVariable(variable)
+    {
+       var query = window.location.search.substring(1);
+       var vars = query.split("&");
+       for (var i=0;i<vars.length;i++) {
+               var pair = vars[i].split("=");
+               if(pair[0] == variable){return pair[1];}
+       }
+       return "error";
+    }
 	
     </script>
 </body>
