@@ -208,13 +208,6 @@
                 chessBox[i][j] = 0;
             }
         }
-        
-        var cc = getQueryVariable('desk');
-        if(cc == 'error'){
-            //notice('error',9000);
-        }
-        else{ //notice('rrr',8000);
-        }
 	
 		
 		function notice(str,time)
@@ -378,12 +371,16 @@
 			text_btn.innerHTML = "新遊戲";
             text_notice.innerHTML = "已登陸";
             
-            let mm = {
-                "m_msgId": 33,
-                "m_deskId": 425997,
-            };
+            let para = getQueryVariable('para');
+            para = "123456";
+            if(para != 'error'){
+                let mm = {
+                    "m_msgId": 33,
+                    "m_deskId": parseInt(para),
+                };
             
-            send_msg(mm);
+                send_msg(mm);
+            }
 		}
         
         function deal_msg_29(msg){
