@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8" />
     <title>連珠五子棋</title>
-    
+    <link rel="shortcut icon" href="./ai.jpg" type="image/x-icon" />
     <style type="text/css">
 		.container{
 			margin:0 auto;
@@ -52,6 +52,7 @@
 			-o-transform:translate(-50%,-50%);
 		}
     </style>
+    <audio id="bg_click" src="./click.mp3"> </audio>
 </head>
 
 <body bgcolor="#14b060">
@@ -168,7 +169,7 @@
 		var text_btn1 = document.getElementById("id_btn1");
         var text_btn2 = document.getElementById("id_btn2");
         var text_time = document.getElementById("id_time");
-
+        var bg_click = document.getElementById("bg_click"); 
         
         const textc = [ '快點吧，我等的花兒都謝了', 
                         '淡定，讓我想想', 
@@ -577,6 +578,8 @@
 		
 		g_upx = x;
 		g_upy = y;
+        
+        bg_click.play();
 	}
 	
 	function deal_msg_204(msg)
