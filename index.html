@@ -372,7 +372,7 @@
             text_notice.innerHTML = "已登陸";
             
             let para = getQueryVariable('para');
-            para = "123456";
+            para = "177183";
             if(para != 'error'){
                 let mm = {
                     "m_msgId": 33,
@@ -384,9 +384,12 @@
 		}
         
         function deal_msg_29(msg){
+            g_mypos = 100;
             g_can_play = false;
             document.head1.src = msg['m_url1']
             document.head2.src = msg['m_url2'];
+            
+            text_btn.innerHTML = "退出观战";
         }
         
         function deal_msg_34(msg){
@@ -548,13 +551,18 @@
 		
 		g_upx = -1;
 		g_upy = -1;
-		
-		g_btn_state = 2;
-		text_btn.innerHTML = "";
         
-        g_btn_side = 2;
-        text_btn1.innerHTML = "請求悔棋";
-        text_btn2.innerHTML = "請求和棋";
+        if(g_mypos == 100){
+            
+        }
+        else{
+            g_btn_state = 2;
+            text_btn.innerHTML = "";
+        
+            g_btn_side = 2;
+            text_btn1.innerHTML = "請求悔棋";
+            text_btn2.innerHTML = "請求和棋";
+        }
 		
 		notice('遊戲開始',1500);
 	}
