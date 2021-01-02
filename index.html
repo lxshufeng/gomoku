@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="utf-8" />
+    <title>連珠五子棋</title>
+    
+    <style type="text/css">
+		.container{
+			margin:0 auto;
+			background-color:rgba(20,176,96);
+		}
+	
+        canvas
+		{
+			display:block;
+			margin:10px auto;
+			background-color:rgba(240,176,96);
+        }
+        
+		.btn{
+			
+			width: 240px;
+			height: 100px;
+			font-size: 36px;
+            border-radius:0px;
+		}
+        
+        .head{
+            width:128px;
+            height:128px;
+        }
+        
+		
+		.dialog{
+			position:fixed;
+            display: none;
+			left:50%;
+			top:40%;
+			width:400px;
+			height: 80px;
+			font-size: 28px;
+			text-align: center;
+			background-color:rgba(50,50,50,0.9);
+			color: white;
+			z-index:9999;
+			padding-top: 30px;
+			border-radius:0px;
+			transform:translate(-50%,-50%);
+			-webkit-transform:translate(-50%,-50%);
+			-moz-transform:translate(-50%,-50%);
+			-ms-transform:translate(-50%,-50%);
+			-o-transform:translate(-50%,-50%);
+		}
+    </style>
+</head>
+
+<body bgcolor="#14b060">
+    
+    <div id="id_head" style="margin:0 auto;width:100%;display:flex;background:#14b060;flex-direction:row;justify-content:space-between;">
+  
+    <img class="head" name="head1" src="./ai.jpg"></img>
+    
+    <div>
+    <div id="notice" style="text-align:center;font-size:36px;height:64px;line-height:64px;">gomoku</div>
+    <div id="id_time" style="text-align:center;font-size:36px;height:64px;line-height:64px;">0</div>
+    </div>
+    
+    <img class="head" name="head2" src="./ai.jpg"></img>
+    </div>
+    
+	
+    <div class="container" id="id_table">
+	<canvas id="mycanvas"></canvas>
+	</div>
+	
+	<div id="id_button" style="margin:0 auto;width:100%;display:flex;background:#14b060;flex-direction:row;justify-content:space-between;">
+	
+	<button class="btn" id="id_btn1" onclick="on_btn_one()"></button>
+    <button class="btn" id="id_btn" onclick="random_game()">登陸</button>
+    <button class="btn" id="id_btn2" onclick="on_btn_two()"></button>
+    
+    <div id="dialog" class="dialog"></div>
+	
+	</div>
+
+	
+
+	<script src="msgpack.min.js"></script>
+    <script type="text/javascript">
+	
+	//canvas.box-shadow: -2px -2px 2px #F3F2F2,5px 5px 5px #6F6767;
+	
+	    //var w = document.documentElement.clientWidth || document.body.clientWidth;
+	const ws_state_OPENING = 0;
+	const ws_state_OPEN    = 1;
+	const ws_state_CLOSING = 2;
+	const ws_state_CLOSE   = 3;
+		
+	//var w = document.body.clientWidth;
+	//var h = document.body.clientHeight;
+	var w =document.documentElement.clientWidth-20;
+
+    var h =document.documentElement.clientHeight
+	
+	var g_w = 30;
+	var g_s = 15;
+	var g_ss = 13;
+    
+    var g_st = 0;
+	var g_start = 0;
+    
+	var g_btn_state = 0;  //0=login 1=new game 2=null
+	var g_interval = null;
+	var g_count = 0;
+    
+    var g_btn_side = 0;
+    
+		
+	//function pageload()
+    {
+        console.log('test===',w,h);
+		
+
+		
+		let wid = Math.min(w,h);
+		
+        {
+            if (w > h) {
+                console.log('w=',wid);
+            }
+			
+			let ww = parseInt(wid / 30) * 30;
+            
+            g_st = parseInt((wid - ww)/2)
+            
+			console.log('g_st=>',g_st);
+            
+
+			
+			//notice(wid+'='+ww);
+			
+			g_w = ww / 15;
+			g_s = g_w / 2;
+			g_ss = parseInt(g_s / 9)*8;
+            
+            g_start = g_st + g_s;
+			
+			console.log('init data =>',g_w,g_s,g_ss);
+			
+			canvas=document.getElementsByTagName('canvas')[0];
+			canvas.width = wid;
+			canvas.height = wid;
+            
+            document.getElementById("id_head").style.width = wid.toString() + "px";
+            document.getElementById("id_button").style.width = wid.toString() + "px";
+ 
+        }
+    }
+
+    //window.onload = pageload;
+	
+	
+        var chess = document.getElementById("mycanvas");
+        var context = chess.getContext('2d');
+	
+		var text_notice = document.getElementById("notice");
+        var text_btn = document.getElementById("id_btn");
+		var text_btn1 = document.getElementById("id_btn1");
+        var text_btn2 = document.getElementById("id_btn2");
+        var text_time = document.getElementById("id_time");
+
+        
+        const textc = [ '快點吧，我等的花兒都謝了', 
+                        '淡定，讓我想想', 
+                        '妳這麽厲害，妳怎麽不上天呢', 
+                        '怎麽又掉線了，網絡走神了嗎', 
+                        '一個不小心，我就贏了'];
+
+		
+		
+
+		var chessBox = [];
+		
+		var wsocket;
+		var handle;
+		var g_state = 0;
+		var g_seed = 0;
+		var g_id = 0;
+		
+		var g_mypos = 0;
+		var g_can_play = false;
+		var g_connected = 0;
+		var g_zhuangpos = 0;
+		
+		var g_upx = -1;
+		var g_upy = -1;
+        var g_timer = null;
+        var g_index = 60;
+		
+		for(var i = 0; i < 15; i++)
+		{
+            chessBox[i]=[];
+            for(var j = 0; j < 15; j++)
+			{
+                chessBox[i][j] = 0;
+            }
+        }
+	
+		
+		function notice(str,time)
+		{
+            document.getElementById("dialog").innerHTML = str;
+            document.getElementById("dialog").style.display = "block";
+		   
+		    setTimeout(function()
+			{
+                document.getElementById("dialog").style.display = "none";
+	    	}, time || 3000);
+		}
+		
+		function drawPoint_black(i,j)
+		{
+			
+            context.beginPath();
+			
+			context.fillStyle = "#112233";
+			
+            context.arc(g_start + i*g_w, g_start+j*g_w, 5, 0, 2*Math.PI);
+            
+            
+            context.fill();
+            context.closePath();
+        }
+		
+        function initChessBoard()
+		{
+			for(var i = 0; i < 15; i++)
+			{
+				for(var j = 0; j < 15; j++)
+				{
+					chessBox[i][j] = 0;
+				}
+			}
+			
+			context.lineWidth = 1;
+			context.strokeStyle = "#484848";
+            
+			
+            for(var i = 0; i < 15; i++)
+			{
+                context.moveTo(g_start + i*g_w, g_start);     //||
+                context.lineTo(g_start + i*g_w, g_start + 14*g_w);
+                context.stroke();
+                context.moveTo(g_start, g_start + i*g_w);     //=
+                context.lineTo(g_start + 14*g_w,g_start + i*g_w);
+                context.stroke();
+            }
+			
+			drawPoint_black(3,3);
+			drawPoint_black(11,11);
+			drawPoint_black(3,11);
+			drawPoint_black(11,3);
+			drawPoint_black(7,7);
+        }
+		
+		function clearCanvas()
+		{
+			context.clearRect(0,0,chess.width,chess.height);
+		}
+        
+        function step_back(i,j)
+		{
+            chessBox[i][j] = 0;
+            
+            context.clearRect(i*g_w+g_st,j*g_w+g_st,g_w,g_w);
+            
+            context.beginPath();
+            context.lineWidth = 1;
+			  
+            
+            context.moveTo(i*g_w+g_start, j*g_w+g_st);     //||
+            context.lineTo(i*g_w+g_start, j*g_w+g_w+g_st);
+           
+            context.strokeStyle = "#010101"; 
+            context.stroke();
+            
+            context.moveTo(i*g_w+g_st, j*g_w+g_start);     //=
+            context.lineTo(i*g_w+g_w+g_st,j*g_w+g_start);
+            context.stroke();
+        }
+       
+        function oneStep(i,j,black)
+		{
+			if(black)
+			{
+				chessBox[i][j] = 1;
+			}
+			else
+			{
+				chessBox[i][j] = 2;
+			}
+			
+            context.beginPath();
+            context.arc(g_start + i*g_w, g_start + j*g_w, g_ss, 0, 2*Math.PI);
+			context.fillStyle = (black ? "#050505" : "#f1f1f1");
+            context.fill();
+            context.closePath();
+        }
+		
+		function oneStep2(i,j)
+		{
+			
+            context.beginPath();
+            context.arc(g_start + i*g_w, g_start + j*g_w, 5, 0, 2*Math.PI);//绘制棋子
+            
+            context.fillStyle = "#ee3412";
+            context.fill();
+            context.closePath();
+        }
+		
+        chess.onclick = function(e)
+		{
+            var x = e.offsetX - g_st;  
+            var y = e.offsetY - g_st; 
+			
+            var i = Math.floor(x / g_w);
+            var j = Math.floor(y / g_w);
+			
+			if(g_can_play)
+			{
+				if(chessBox[i][j])
+				{
+					notice("error");
+					return;
+				}
+			
+				msg = {
+					m_msgId: 202,
+					m_posx: i,
+					m_posy: j,
+				};
+				
+				var obj = msgpack.encode(msg);
+				wsocket.send(obj);
+			}
+			else
+			{
+				notice("error! not your turn");
+			}
+        }
+	
+		function handle_msg(msg)
+		{
+			var id = msg["m_msgId"];
+			if(handle.has(id))
+			{
+				handle.get(id)(msg);
+			}
+			else
+			{
+				console.log("not found the handle = ",id);
+			}
+		};
+		
+		function deal_msg_1002(msg)
+		{
+			g_btn_state = 1;
+			text_btn.innerHTML = "新遊戲";
+            text_notice.innerHTML = "已登陸";
+		}
+		
+		function deal_msg_45(msg)
+		{
+            let error = msg['m_error'];
+            if(error == 0){
+                if (confirm("對方請求悔棋，同意？")) {
+                    let msg = {
+                        "m_msgId": 46,
+                        "m_agree": 1,
+                    };
+
+                    send_msg(msg);
+                }else{
+                    let msg = {
+                        "m_msgId": 46,
+                        "m_agree": 0,
+                    };
+
+                    send_msg(msg);
+                }
+            }
+            else{
+                notice("次數已經用完");
+            }
+		}
+        
+        function deal_msg_47(msg){
+            let error = msg['m_error'];
+            if (error == 1){
+                notice('對方拒絕悔棋');
+            }
+            else if(error == 0){
+            
+                let gx = msg['m_cx'];
+                let gy = msg['m_cy'];
+                
+                g_upx = gx;
+                g_upy = gy;
+                
+                oneStep2(gx,gy);
+                
+                let x = msg["m_posx"];
+                let y = msg["m_posy"];
+                
+                step_back(x,y);
+                if(msg['m_pos'] == g_mypos){
+                    g_can_play = false;
+                    text_notice.innerHTML = "等待對方";
+                }
+                else{
+                    g_can_play = true;
+                    text_notice.innerHTML = "該妳下棋";
+                }
+                
+                count_sec();
+            }
+        }
+		
+		function deal_msg_54(msg)
+		{
+            let error = msg['m_error'];
+            if(error == 0){
+            	if (confirm("對方請求和棋，同意？")) {
+                    let msg = {
+                        "m_msgId": 55,
+                        "m_agree": 1,
+                    };
+
+                    send_msg(msg);
+                } else{
+                    let msg = {
+                        "m_msgId": 55,
+                        "m_agree": 0,
+                    };
+
+                    send_msg(msg);
+                }
+                
+                return;
+
+            }
+            else if(error == 1){
+                notice('次數已經用完');
+            }
+		}
+        
+        function deal_msg_56(msg){
+            if (msg['m_error'] == 1) {
+                notice("對方拒絕和棋");
+            }
+        }
+		
+		function deal_msg_91(msg)
+		{
+			console.log(msg);
+		}
+		
+		function deal_msg_2(msg)
+		{
+			wsocket.close();
+            
+            if(msg['m_errorCode'] == 0){
+                g_id = msg["m_id"];
+                g_seed = msg["m_seed"];
+		
+                let addr = "wss://login.clover123.com";
+		
+                g_state = 1;
+                connect(addr);
+            }
+            else{
+                notice('error login');
+            }
+
+		}
+	
+		function deal_msg_171(msg)
+		{
+			console.log("deal msg 171--------");
+		
+			msg = {
+				"m_msgId": 11,
+				"m_seed" : g_seed,
+				"m_id"   : g_id,
+				"m_md5"  : "md5",
+			};
+		
+			send_msg(msg);
+		}
+	
+	function deal_msg_12(msg)
+	{
+		console.log("user id = ",msg["m_id"]);
+		initChessBoard();
+	}
+	
+	
+	function deal_msg_200(msg)
+	{
+        close_time();
+		
+		console.log("#game is start, my pos = ",g_mypos);
+		
+		clearCanvas();
+		initChessBoard();
+		
+		g_zhuangpos = msg['m_zhuang'];
+		
+		g_upx = -1;
+		g_upy = -1;
+		
+		g_btn_state = 2;
+		text_btn.innerHTML = "";
+        
+        g_btn_side = 2;
+        text_btn1.innerHTML = "請求悔棋";
+        text_btn2.innerHTML = "請求和棋";
+		
+		notice('遊戲開始',1500);
+	}
+	
+	function deal_msg_201(msg)
+	{
+		//console.log(msg);
+		for(i = 0,len = msg["m_black"].length; i < len; i++) 
+		{
+			var v = msg["m_black"][i];
+			var x = v%100;
+			var y = v/100;
+			oneStep(x,y,true);
+		}
+		for(i = 0,len = msg["m_white"].length; i < len; i++) 
+		{
+			var v = msg["m_white"][i];
+			var x = v%100;
+			var y = v/100;
+			oneStep(x,y,false);
+		}
+	}
+	
+	function deal_msg_203(msg)
+	{
+		if(g_upx > -1){
+			if(msg["m_pos"] == g_zhuangpos)
+			{
+				oneStep(g_upx,g_upy,false);
+			}
+			else
+			{
+				oneStep(g_upx,g_upy,true);
+			}
+		}
+		
+		var x = msg["m_posx"];
+		var y = msg["m_posy"];
+		
+		if(msg["m_pos"] == g_zhuangpos)
+		{
+			oneStep(x,y,true);
+		}
+		else
+		{
+			oneStep(x,y,false);
+		}
+		
+		oneStep2(x,y);
+		
+		g_upx = x;
+		g_upy = y;
+	}
+	
+	function deal_msg_204(msg)
+	{
+		if(msg["m_pos"] == g_mypos)
+		{
+			g_can_play = true;
+			text_notice.innerHTML = "該妳下棋";
+		}
+		else
+		{
+			g_can_play = false;
+			text_notice.innerHTML = "等待對方";
+		}
+        
+        count_sec();
+	}
+	
+	function deal_msg_205(msg)
+	{
+        console.log(msg);
+		g_can_play = false;
+        //
+        let res = msg['m_result'];
+        let result = 'game over';
+        if (res == 4) {
+            result = '白棋胜利(禁手)';
+        }
+        else if (res == 3) {
+            result = '超時解散';
+        }
+        else if (res == 2) {
+            result = '平局'
+        }
+        else {
+            if (msg['m_winpos'] == g_mypos) {
+                result = '妳贏了';
+            }
+            else {
+                result = '妳輸了';
+            }
+        }
+        notice(result);
+        
+        g_btn_side = 1;
+        
+        text_btn1.innerHTML = "準備開局";
+        text_btn2.innerHTML = "結束遊戲";
+        
+        text_notice.innerHTML = "本局結束";
+        g_index = 1;
+	}
+	
+	function deal_msg_37(msg)
+	{
+		var ready_pos = msg['m_pos'];
+
+		if(ready_pos == g_mypos)
+		{
+			text_notice.innerHTML = "等待對方準備";
+            
+            text_btn1.innerHTML = "已經準備";
+            text_btn2.innerHTML = "結束遊戲";
+		}
+		else{
+			text_notice.innerHTML = "對方已經準備";
+
+		}
+	}
+	
+	function deal_msg_30(msg)
+	{
+		g_mypos = msg['m_pos'];
+	}
+    
+    function deal_msg_31(msg){
+        let pos = msg['m_pos'];
+        let url = msg['m_face'];
+        if(pos == g_mypos){
+            document.head1.src = url;
+        }
+        else{
+            document.head2.src = url;
+        }
+    }
+	
+	function deal_msg_38(msg)
+	{	
+		msg = {
+			"m_msgId": 36,
+			"m_pos": g_mypos,     //准备
+		};
+		
+		send_msg(msg);
+	}
+	
+	function deal_msg_80(msg){
+		g_btn_state = 1;
+		text_btn.innerHTML = "新遊戲";
+        text_notice.innerHTML = "遊戲結束";
+        
+        g_btn_side = 0;
+        text_btn1.innerHTML = "";
+        text_btn2.innerHTML = "";
+	}
+	
+	function deal_msg_210(msg)
+	{
+		g_zhuangpos = msg['m_zhuang'];
+	}
+    
+    function deal_msg_1006(msg){
+        let type = msg['m_type'];
+        let pos = msg['m_pos'];
+        let cc = msg['m_msg'];
+        
+        if(type == 1){
+            let info = "";
+            if (cc == 'c1') {
+                info = textc[0];
+            }
+            else if (cc == 'c2') {
+                info = textc[1];
+            }
+            else if (cc == 'c3') {
+                info = textc[2];
+            }
+            else if (cc == 'c4') {
+                info = textc[3];
+            }
+            else if (cc == 'c5') {
+                info = textc[4];
+            }
+            notice(info,1000);
+        }
+    }
+	
+	function register_msg()
+	{
+		handle = new Map();
+		handle.set(2,deal_msg_2);
+		handle.set(171,deal_msg_171);
+		handle.set(12,deal_msg_12);
+		handle.set(1002,deal_msg_1002);
+        handle.set(1006,deal_msg_1006);
+		handle.set(30,deal_msg_30);
+        handle.set(31,deal_msg_31);
+		handle.set(37,deal_msg_37);
+		handle.set(38,deal_msg_38);
+		handle.set(45,deal_msg_45);
+        handle.set(47,deal_msg_47);
+		handle.set(54,deal_msg_54);
+        handle.set(56,deal_msg_56);
+		handle.set(80,deal_msg_80);
+		handle.set(200,deal_msg_200);
+		handle.set(201,deal_msg_201);
+		handle.set(203,deal_msg_203);
+		handle.set(204,deal_msg_204);
+		handle.set(205,deal_msg_205);
+		handle.set(210,deal_msg_210);
+	}
+	
+	function login_game()
+	{	
+		g_state = 0;
+		register_msg();
+	
+		var addr = "wss://www.clover123.com";
+		connect(addr);
+	}
+	
+	function send_msg(msg)
+	{
+		//console.log("socket state = ",wsocket.readyState);
+	
+		var obj = msgpack.encode(msg);
+		wsocket.send(obj);
+	}
+
+    function connect(addr) 
+	{
+		wsocket = new WebSocket(addr);
+		wsocket.binaryType = "arraybuffer";
+		
+        wsocket.onopen =  function (msg) 
+		{
+			g_connected ++;
+            console.log('#websocket opened c=',g_connected);
+			if(g_state == 0)
+			{
+				msg = {
+					"m_msgId"   : 1,
+					"m_nikename": "小灰",
+					"m_plate"   : "visitor",
+					"m_appId"   : 0,
+					"m_uuid"    : '',
+					"m_sex"     : 1,
+					"m_imageUrl": "http://imgsrc.baidu.com/forum/pic/item/ca9317950a7b0208730467be62d9f2d3562cc831.jpg",
+				};
+
+				wsocket.send(msgpack.encode(msg));
+			}
+			else if(g_state == 1)
+			{
+				msg = {
+				"m_msgId" : 11,
+				"m_seed"  : g_seed,
+				"m_id"    : g_id,
+				"m_md5"   : "md5",
+				};
+				
+				wsocket.send(msgpack.encode(msg));
+			}
+        };
+		
+        wsocket.onmessage = function (message) 
+		{
+			
+			var msg = msgpack.decode(message.data);
+			
+			handle_msg(msg);
+        };
+		
+        wsocket.onerror = function (error) 
+		{
+            console.log('error :',error);
+        };
+
+        wsocket.onclose =  function (error) 
+		{
+			g_connected --;
+			if(g_connected <= 0){
+				g_connected = 0;
+				g_btn_state = 0;
+				text_btn.innerHTML = "登陸";
+                text_notice.innerHTML = "遊戲斷開";
+                text_btn1.innerHTML = "";
+                text_btn2.innerHTML = "";
+			}
+            console.log('#websocket closed c= ',g_connected);
+        };
+    }
+    
+    function count_sec() {
+        if(g_timer){
+        clearInterval(g_timer);
+        g_timer = null;
+        }
+        g_index = 60;
+        text_time.innerHTML = g_index;
+   
+        g_timer = setInterval(function () {
+            if (--g_index >= 0) {
+                text_time.innerHTML = g_index;
+            } else {
+                clearInterval(g_timer);
+            }
+        }, 1000);
+    }
+    
+    //0=error 1=ready 2=request
+    function on_btn_one(){
+        if(g_btn_side == 1){
+        	let msg = {
+                "m_msgId": 36,
+                "m_pos": g_mypos,     
+            };
+		
+            send_msg(msg);
+        }
+        else if(g_btn_side == 2){
+            let msg = {
+                "m_msgId": 44,
+            };
+            
+            send_msg(msg);
+        }
+    }
+    
+    function on_btn_two(){
+        if(g_btn_side == 1){
+            let msg = {
+                "m_msgId": 50,
+            };
+            send_msg(msg);
+        }
+        else if(g_btn_side == 2){
+            let msg = {
+                "m_msgId": 53,
+            };
+            
+            send_msg(msg);
+        }
+    }
+	
+	function random_game()  //0=connect 1=start 2=playing 3=ready 
+	{
+		if(g_btn_state == 0){
+			login_game();
+		}
+		if(g_btn_state == 1){
+			msg = {
+				"m_msgId":145,
+			};
+		
+			send_msg(msg);
+            
+            show_time();
+			
+		}
+		else if(g_btn_state == 2){
+		}
+	}
+    
+    function show_time(){
+        if(g_interval){
+            clearInterval(g_interval);
+        }
+        g_count = 0;
+        g_interval = setInterval("clock()",1000);
+    }
+    
+    function close_time(){
+    	if(g_interval){
+			clearInterval(g_interval);
+			g_interval = null;
+		}
+    }
+    
+    function clock()
+	{
+            document.getElementById("dialog").innerHTML = "等待: " + g_count;
+            document.getElementById("dialog").style.display = "block";
+
+			if(++g_count > 7){
+                document.getElementById("dialog").style.display = "none";
+                if(g_interval){
+                    clearInterval(g_interval);
+                    g_interval = null;
+                }
+				
+			}
+	}
+	
+    </script>
+</body>
+</html>
