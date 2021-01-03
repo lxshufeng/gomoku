@@ -110,7 +110,7 @@
     var g_st = 0;
 	var g_start = 0;
     
-	var g_btn_state = 0;  //0=login 1=new game 2=null
+	var g_btn_state = 0;  //0=login 1=new game 2=look 3=null
 	var g_interval = null;
 	var g_count = 0;
     
@@ -372,7 +372,7 @@
             text_notice.innerHTML = "已登陸";
             
             let para = getQueryVariable('para');
-            //para = "177183";
+            para = "414807";
             if(para != 'error'){
                 let mm = {
                     "m_msgId": 33,
@@ -389,17 +389,23 @@
             document.head1.src = msg['m_url1']
             document.head2.src = msg['m_url2'];
             
-            text_btn.innerHTML = "退出观战";
+            g_btn_state = 2;
+            text_btn.innerHTML = "退出觀戰";
         }
         
         function deal_msg_34(msg){
             let error = msg['m_error'];
             if(error == 1){
-                notice('房间已经解散');
+                notice('房間已經解散');
             }
             else if(error == 2){
-                notice('房间观战已满');
+                notice('房間觀戰已滿');
             }
+        }
+        
+        function deal_msg_43(msg){
+            g_btn_state = 1;
+            text_btn.innerHTML = "新遊戲";
         }
 		
 		function deal_msg_45(msg)
@@ -556,7 +562,7 @@
             
         }
         else{
-            g_btn_state = 2;
+            g_btn_state = 3;
             text_btn.innerHTML = "";
         
             g_btn_side = 2;
@@ -666,6 +672,10 @@
 	{
         //console.log(msg);
 		g_can_play = false;
+        if(g_mypos == 100){
+            text_notice.innerHTML = "本局結束";
+            return;
+        }
         //
         let res = msg['m_result'];
         let result = 'game over';
@@ -790,6 +800,7 @@
         handle.set(34,deal_msg_34);
 		handle.set(37,deal_msg_37);
 		handle.set(38,deal_msg_38);
+        handle.set(43,deal_msg_43);
 		handle.set(45,deal_msg_45);
         handle.set(47,deal_msg_47);
 		handle.set(54,deal_msg_54);
@@ -886,8 +897,8 @@
     
     function count_sec() {
         if(g_timer){
-        clearInterval(g_timer);
-        g_timer = null;
+            clearInterval(g_timer);
+            g_timer = null;
         }
         g_index = 60;
         text_time.innerHTML = g_index;
@@ -952,7 +963,13 @@
 			
 		}
 		else if(g_btn_state == 2){
+            let msg = {
+                "m_msgId": 35,
+            };
+            send_msg(msg);
 		}
+        else if(g_btn_state == 3){
+        }
 	}
     
     function show_time(){
