@@ -80,11 +80,8 @@
     <button class="btn" id="id_btn" onclick="random_game()">登陸</button>
     <button class="btn" id="id_btn2" onclick="on_btn_two()"></button>
     
-    <div id="dialog" class="dialog"></div>
-	
 	</div>
-
-	
+	<div id="dialog" class="dialog"></div>
 
 	<script src="msgpack.min.js"></script>
     <script type="text/javascript">
@@ -372,7 +369,7 @@
             text_notice.innerHTML = "已登陸";
             
             let para = getQueryVariable('para');
-            para = "414807";
+            //para = "414807";
             if(para != 'error'){
                 let mm = {
                     "m_msgId": 33,
@@ -391,6 +388,7 @@
             
             g_btn_state = 2;
             text_btn.innerHTML = "退出觀戰";
+            document.title = "邀您觀戰";
         }
         
         function deal_msg_34(msg){
@@ -749,6 +747,38 @@
 		
 		send_msg(msg);
 	}
+    
+    function deal_msg_0(msg){
+       // console.log(msg);
+       console.log('=======>');
+        let dlist = msg["m_deskList"];
+        if(dlist.length > 0){
+        var div = document.getElementById("id_online");
+        div.innerHTML = "";
+            for(let i = 0; i < dlist.length; ++i){
+                let deskId = dlist[i].m_deskId;
+                
+                let url = "window.location.href = 'http://www.com/test?para=" + deskId +"'";
+            
+                var divc = document.createElement('div');
+                var img1 = document.createElement('img');
+                img1.setAttribute('src', dlist[i].m_image1);
+                img1.setAttribute('width',128);
+                img1.setAttribute('height',128);
+                divc.appendChild(img1);
+                
+                var img2 = document.createElement('img');
+                img2.setAttribute('src', dlist[i].m_image2);
+                img2.setAttribute('width',128);
+                img2.setAttribute('height',128);
+                img2.setAttribute('onclick',url);
+                divc.appendChild(img2);
+                
+                div.appendChild(divc);
+            }
+ 
+        }
+    }
 	
 	function deal_msg_80(msg){
 		g_btn_state = 1;
@@ -803,6 +833,7 @@
         handle.set(43,deal_msg_43);
 		handle.set(45,deal_msg_45);
         handle.set(47,deal_msg_47);
+        handle.set(52,deal_msg_52);
 		handle.set(54,deal_msg_54);
         handle.set(56,deal_msg_56);
 		handle.set(80,deal_msg_80);
